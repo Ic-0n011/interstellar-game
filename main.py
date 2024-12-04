@@ -10,15 +10,13 @@ from curses import (
     KEY_C2,
     COLOR_BLACK,
     COLOR_WHITE,
-    COLOR_CYAN,
     )
 from game import Game
 # pip install windows-curses
 
 """
 TODO:
-    разбить все классы и функции по файлам, дать всему коментарии, добавить графики!!!!
-
+    добавить графики!!!!
      сделать поле больше и выводить только малую его часть
      попробовать сонарное видение
      удобный интерфейс + графика
@@ -108,7 +106,7 @@ def show_author(stdscr):
 
 def main(stdscr):
     start_color()
-    init_pair(1, COLOR_CYAN, COLOR_WHITE)  # Цвет для выделенного пункта меню
+    init_pair(1, COLOR_BLACK, COLOR_WHITE)  # Цвет для выделенного пункта меню
 
     while True:
         choice = main_menu(stdscr)
