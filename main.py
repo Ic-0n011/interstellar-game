@@ -8,29 +8,14 @@ from curses import (
     KEY_A2,
     KEY_DOWN,
     KEY_C2,
-    COLOR_BLACK,
-    COLOR_WHITE,
+    COLOR_RED,
+    COLOR_MAGENTA,
     )
 from game import Game
 # pip install windows-curses
 
-"""
-TODO:
-скорость/инерция корабля   -   добавить топливо   -  время
-        чем вышел скорость тем меньше тратится время, но больше расходуется топливо
-        чем ниже скорость, тем больше тратится время, но меньше топливо
-        !!!! инерция - скорость теряется и может изменяться направление корабля при подходе к масивным обьектам (притяжение/отталкивание)
 
-
-добавить графики!!!!удобный интерфейс + графика           ???какая графика будет
-
-сделать поле больше и выводить только малую его часть     ???как показать игроку куда лететь
-
-попробовать сонарное видение                              ???сложная реализация, сложный но интересный геймплей
-
-"""
-
-def main_menu(stdscr):
+def main_menu(stdscr) -> str:
     current_row = 0
     menu = ["Начать новую игру", "Что нужно делать", "Об авторе", "Выход"]
 
@@ -73,17 +58,19 @@ def main_menu(stdscr):
             elif current_row == 3:  # Выход
                 return "exit"
 
-
-def show_instructions(stdscr):
+def show_instructions(stdscr) -> None:
     stdscr.clear()
     instructions = [
         "Цель игры: добраться до базы (O),",
+        "за кратчайшее время, следите за показателем топлива!",
         "избегая чёрных дыр (B) и обломков материи (X).",
         "Белые дыры (W) отбросят вас в случайном направлении.",
         "",
+        "",
         "Управление:",
         "Стрелка влево/вправо - Поворот корабля.",
-        "Стрелка вверх - Ускорение.",
+        "Стрелка вверх - Ускорение, стрелка вниз - тормоз",
+        "",
         "",
         "Нажмите любую клавишу, чтобы вернуться в меню."
     ]
@@ -93,12 +80,11 @@ def show_instructions(stdscr):
     stdscr.refresh()
     stdscr.getch()
 
-def show_author(stdscr):
+def show_author(stdscr) -> None:
     stdscr.clear()
     author_info = [
         "Автор игры: Ic-0n.",
         "Версия: 1.0.",
-        "Спасибо за игру!",
         "",
         "Нажмите любую клавишу, чтобы вернуться в меню."
     ]
@@ -108,9 +94,9 @@ def show_author(stdscr):
     stdscr.refresh()
     stdscr.getch()
 
-def main(stdscr):
+def main(stdscr) -> None:
     start_color()
-    init_pair(1, COLOR_BLACK, COLOR_WHITE)  # Цвет для выделенного пункта меню
+    init_pair(1, COLOR_RED, COLOR_MAGENTA)
 
     while True:
         choice = main_menu(stdscr)
