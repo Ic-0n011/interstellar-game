@@ -93,9 +93,9 @@ class Game:
     def handle_input(self) -> None:
         key = self.stdscr.getch()
 
-        if key == KEY_LEFT or key == KEY_B3:
+        if key == KEY_RIGHT or key == KEY_B3:
             self.ship.turn_left()
-        elif key == KEY_RIGHT or key == KEY_B1:
+        elif key == KEY_LEFT or key == KEY_B1:
             self.ship.turn_right()
         elif key == KEY_UP or key == KEY_A2:
             self.ship.accelerate()
