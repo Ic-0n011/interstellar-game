@@ -30,14 +30,14 @@ from curses import (
     )
 import random
 from texts import ASCII_SHIP_WIN, ASCII_SHIP_LOSE, ASCII_TITLE
-import time
+
 
 class Game:
     def __init__(self, stdscr) -> None:
         self.stdscr = stdscr
         self.stdscr.nodelay(1)
         self.stdscr.timeout(50)
-
+        self.running = True
         self.field = [[EMPTY for _ in range(FIELD_WIDTH)] for _ in range(FIELD_HEIGHT)]
         self.empty_cells = [(x, y) for y in range(FIELD_HEIGHT) for x in range(FIELD_WIDTH)]
         self.holes = []
@@ -45,7 +45,8 @@ class Game:
         self.generate_field()
         self.base_x, self.base_y = self.place_object(BASE)
 
-    def place_object(self, obj, min_distance=5):
+    def place_object(self, obj, min_distance=5) -> tuple[int, int]:
+        """Размещает объект на игровом поле, избегая близости к черным дырам."""
         while True:
             x, y = random.choice(self.empty_cells)
             if all(abs(x - h.x) + abs(y - h.y) >= min_distance for h in self.holes):
@@ -54,6 +55,7 @@ class Game:
                 return x, y
 
     def generate_field(self) -> None:
+        """Генерирует черные и белые дыры, а также обломки."""
         for _ in range(6):
             while True:
                 x, y = random.choice(self.empty_cells)
@@ -71,6 +73,7 @@ class Game:
                 self.place_object(DEBRIS)
 
     def draw(self) -> None:
+        """Отображает игровое поле и интерфейс в терминале."""
         start_color()
         init_pair(1, COLOR_CYAN, COLOR_BLACK)   # Корабль (синий)
         init_pair(2, COLOR_GREEN, COLOR_BLACK)  # База (зелёный)
@@ -79,7 +82,7 @@ class Game:
         init_pair(5, COLOR_YELLOW, COLOR_BLACK) # Белая дыра (жёлтый)
 
         self.stdscr.clear()
-
+        # Проверяем размеры терминала
         height, width = self.stdscr.getmaxyx()
         if height < (FIELD_HEIGHT + 16) or width < FIELD_WIDTH:
             self.stdscr.addstr(0, 0, "Увеличьте размер окна терминала.")
@@ -162,12 +165,15 @@ class Game:
         self.stdscr.refresh()
 
     def handle_input(self) -> None:
+        """Управление игрока с помощью стрелок"""
         key = self.stdscr.getch()
 
         if key != -1:  # Если клавиша нажата
             self.last_key = key
 
-        if self.last_key == KEY_RIGHT or self.last_key == KEY_B3:
+        if key == 27:  # ESC
+            self.running = False
+        elif self.last_key == KEY_RIGHT or self.last_key == KEY_B3:
             self.ship.change_direction(-1)
         elif self.last_key == KEY_LEFT or self.last_key == KEY_B1:
             self.ship.change_direction(1)
@@ -185,17 +191,16 @@ class Game:
     def check_collisions(self) -> str:
         x, y = self.ship.x, self.ship.y
 
-        if x < 0 or x >= FIELD_WIDTH or y < 0 or y >= FIELD_HEIGHT:
-            return 'loss'  # Вышел за границы поля
-
-        if self.field[y][x] == DEBRIS:
-            return 'loss'  # Столкновение с обломками
+        if (
+            x < 0 or x >= FIELD_WIDTH or  # Вышел за границы поля
+            y < 0 or y >= FIELD_HEIGHT or
+            self.field[y][x] == DEBRIS or # Столкнулся с обломками
+            self.ship.fuel <= 0 # закончилось топливо
+        ):
+            return 'loss'
 
         for hole in self.holes:
-            hole.affect_ship(self.ship, self.holes)
-
-        if self.ship.fuel <= 0:
-            return 'loss'
+            hole.affect_ship(self.ship, self.holes) # проверяем близость к дырам
 
         if self.field[y][x] == BASE:
             return 'win'  # Достиг базы
@@ -203,11 +208,12 @@ class Game:
         return 'continue'
 
     def play(self) -> str:
+        """Начало игры, игровой цикл"""
         self.show_ASCII_screen(ASCII_TITLE, "Начало игры")
         self.elapsed_time = 0
         self.last_key = -1
 
-        while True:
+        while self.running:
             self.draw()
             self.handle_input()
             # Обновление времени
@@ -239,29 +245,25 @@ class Game:
 
 
 class Hole:
-    def __init__(self, x, y, hole_type, radius=4):
+    def __init__(self, x, y, hole_type, radius=4) -> None:
         self.x = x
         self.y = y
         self.type = hole_type  # Тип дыры: чёрная или белая
-        self.radius = radius
+        self.radius = radius # радиус дыры
         self.body = []  # Части тела дыры
         self.influence_area = []
         self.timer = 0
         self.construct_body()
 
-    def construct_body(self):
+    def construct_body(self) -> None:
         """Формирует тело дыры в виде клеток."""
-        offsets = [
-            (-1, -1), (0, -1), (1, -1),
-            (-1, 0), (0, 0), (1, 0),
-            (-1, 1), (0, 1), (1, 1),
-        ] if self.radius == 3 else [
-            (0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)
-        ]
+        offsets = [(-1 + dx, -1 + dy) for dx in range(3) for dy in range(3)]
+        if self.radius != 3:
+            offsets = [(dx, dy) for dx, dy in offsets if dx == 0 or dy == 0]
         for dx, dy in offsets:
             self.body.append((self.x + dx, self.y + dy))
 
-    def calculate_influence(self, empty_cells):
+    def calculate_influence(self, empty_cells) -> None:
         """Сохраняет клетки в зоне влияния и удаляет их из доступных."""
         for dy in range(-self.radius, self.radius + 1):
             for dx in range(-self.radius, self.radius + 1):
@@ -270,14 +272,14 @@ class Hole:
                     empty_cells.remove((nx, ny))
                     self.influence_area.append((nx, ny))
 
-    def intersects(self, other):
+    def intersects(self, other) -> bool:
         """Проверяет, пересекается ли зона влияния с другой дырой."""
         for cell in self.influence_area:
             if cell in other.influence_area:
                 return True
         return False
 
-    def affect_ship(self, ship, holes):
+    def affect_ship(self, ship, holes) -> None:
         """Влияет на положение корабля в зависимости от типа дыры."""
         ship_position = (ship.x, ship.y)
 
@@ -302,14 +304,22 @@ class Hole:
 
             elif self.type == WHITE_HOLE:
                 # Отталкивание в свободную клетку
-                available_directions = [
-                    (dx, dy) for dx, dy in DIRECTIONS.values()
-                    if 0 <= ship.x + dx < FIELD_WIDTH and 0 <= ship.y + dy < FIELD_HEIGHT
-                ]
-                if available_directions:
-                    dx, dy = random.choice(available_directions)
-                    ship.x += dx
-                    ship.y += dy
+                dx = ship.x - self.x
+                dy = ship.y - self.y
+                magnitude = max(1, abs(dx) + abs(dy))
+                dx = dx // magnitude
+                dy = dy // magnitude
+
+                # Отталкиваем корабль сильнее, если он движется быстрее
+                push_distance = max(1, ship.speed * 2)
+                new_x = ship.x + dx * push_distance
+                new_y = ship.y + dy * push_distance
+
+                # Проверяем границы поля
+                if 0 <= new_x < FIELD_WIDTH:
+                    ship.x = new_x
+                if 0 <= new_y < FIELD_HEIGHT:
+                    ship.y = new_y
 
         # Проверяем, если корабль в зоне влияния, но не внутри тела
         elif ship_position in self.influence_area:
@@ -319,7 +329,6 @@ class Hole:
                 dy = -1 if ship.y > self.y else (1 if ship.y < self.y else 0)
                 ship.x += dx * ship.speed  # Учитываем скорость
                 ship.y += dy * ship.speed
-
 
 
 class Ship:
@@ -337,14 +346,14 @@ class Ship:
             self.y += dy
             self.fuel -= self.speed * 0.4  # Чем выше скорость, тем больше расход топлива
 
-    def change_direction(self, step):
+    def change_direction(self, step) -> None:
         """Меняет направление корабля"""
         directions_list = list(DIRECTIONS.keys())  # Получаем список направлений
         current_index = directions_list.index(self.img)
         new_index = (current_index + step) % len(directions_list)
         self.img = directions_list[new_index]  # Обновляем изображение корабля
 
-    def change_speed(self, delta):
+    def change_speed(self, delta) -> None:
         """Изменяет скорость корабля"""
         self.speed = max(0, min(2, self.speed + delta))
 

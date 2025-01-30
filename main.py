@@ -41,7 +41,7 @@ def main_menu(stdscr) -> str:
         key = stdscr.getch()
 
         if key == 27:  # ESC
-            return "exit"
+            break
         elif (key == KEY_UP or key == KEY_A2) and current_row > 0:
             current_row -= 1
         elif (key == KEY_DOWN or key == KEY_C2) and current_row < len(MAIN_MENU) - 1:
