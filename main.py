@@ -65,5 +65,3 @@ def show_text_screen(stdscr, text_list) -> None:
     stdscr.getch()
 
 wrapper(main_menu)
-input("Нажмите Enter для выхода...")
-
