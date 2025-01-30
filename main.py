@@ -14,7 +14,6 @@ from curses import (
 from game import Game
 from texts import MAIN_MENU, INSTRUCTIONS, AUTHOR_INFO
 
-# pip install windows-curses
 
 def main_menu(stdscr) -> str:
     current_row = 0
