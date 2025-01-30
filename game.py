@@ -38,18 +38,24 @@ class Game:
         self.stdscr.nodelay(1)
         self.stdscr.timeout(50)
         self.running = True
-        self.field = [[EMPTY for _ in range(FIELD_WIDTH)] for _ in range(FIELD_HEIGHT)]
-        self.empty_cells = [(x, y) for y in range(FIELD_HEIGHT) for x in range(FIELD_WIDTH)]
+        self.field = [
+            [EMPTY for _ in range(FIELD_WIDTH)] for _ in range(FIELD_HEIGHT)
+        ]
+        self.empty_cells = [
+            (x, y) for y in range(FIELD_HEIGHT) for x in range(FIELD_WIDTH)
+        ]
         self.holes = []
         self.ship = Ship(FIELD_WIDTH // 2, FIELD_HEIGHT // 2)
         self.generate_field()
         self.base_x, self.base_y = self.place_object(BASE)
 
     def place_object(self, obj, min_distance=5) -> tuple[int, int]:
-        """Размещает объект на игровом поле, избегая близости к черным дырам."""
+        """Размещает объект на игровом поле, избегая близости к черным дырам"""
         while True:
             x, y = random.choice(self.empty_cells)
-            if all(abs(x - h.x) + abs(y - h.y) >= min_distance for h in self.holes):
+            if all(
+                abs(x - h.x) + abs(y - h.y) >= min_distance for h in self.holes
+            ):
                 self.field[y][x] = obj
                 self.empty_cells.remove((x, y))
                 return x, y
@@ -60,7 +66,10 @@ class Game:
             while True:
                 x, y = random.choice(self.empty_cells)
                 radius = random.choice([2, 3])
-                hole_type = BLACK_HOLE if len(self.holes) % 2 == 0 else WHITE_HOLE
+                if len(self.holes) % 2 == 0:
+                    hole_type = BLACK_HOLE
+                else:
+                    hole_type = WHITE_HOLE
                 new_hole = Hole(x, y, hole_type, radius)
                 new_hole.calculate_influence(self.empty_cells)
 
@@ -79,7 +88,7 @@ class Game:
         init_pair(2, COLOR_GREEN, COLOR_BLACK)  # База (зелёный)
         init_pair(3, COLOR_RED, COLOR_BLACK)    # Обломки (красный)
         init_pair(4, COLOR_WHITE, COLOR_BLACK)  # Чёрная дыра (белый)
-        init_pair(5, COLOR_YELLOW, COLOR_BLACK) # Белая дыра (жёлтый)
+        init_pair(5, COLOR_YELLOW, COLOR_BLACK)  # Белая дыра (жёлтый)
 
         self.stdscr.clear()
         # Проверяем размеры терминала
@@ -122,15 +131,29 @@ class Game:
         # Рисуем зоны влияния дыр
         for hole in self.holes:
             for cell in hole.body:
-                buffer.append((cell[1] + 1, cell[0] + 1, hole.type, 4 if hole.type == BLACK_HOLE else 5))
-            buffer.append((hole.y + 1, hole.x + 1, f"{hole.radius}", 4 if hole.type == BLACK_HOLE else 5))
+                buffer.append(
+                    (
+                        cell[1] + 1,
+                        cell[0] + 1,
+                        hole.type,
+                        4 if hole.type == BLACK_HOLE else 5
+                    )
+                )
+            buffer.append(
+                (
+                    hole.y + 1,
+                    hole.x + 1,
+                    f"{hole.radius}",
+                    4 if hole.type == BLACK_HOLE else 5
+                )
+            )
 
         # Отображаем всё сразу
         for y, x, ch, color in buffer:
             self.stdscr.addch(y, x, ch, color_pair(color))
 
         # Вычисляем необходимые значения
-        base_distance = abs(self.ship.x - self.base_x) + abs(self.ship.y - self.base_y)
+        to_base = abs(self.ship.x-self.base_x)+abs(self.ship.y-self.base_y)
         elapsed_hours = int(self.elapsed_time // 60)
         elapsed_minutes = int(self.elapsed_time % 60)
 
@@ -139,7 +162,7 @@ class Game:
             (f"│Скорость: {self.ship.speed}", 3, 1),
             (f"│Направление: {self.ship.img}", 4, 2),
             (f"│Координаты: ({self.ship.x}, {self.ship.y})", 5, 3),
-            (f"│Расстояние до базы: {base_distance}", 6, 4),
+            (f"│Расстояние до базы: {to_base}", 6, 4),
             (f"│Топливо: {round(self.ship.fuel, 2)}", 7, 1),
             (f"│Время: {elapsed_hours} ч {elapsed_minutes} мин", 8, 5),
         ]
@@ -157,7 +180,12 @@ class Game:
 
         # Вывод информации
         for text, offset, color in info_lines:
-                self.stdscr.addstr(FIELD_HEIGHT + offset, 0, text, color_pair(color))
+            self.stdscr.addstr(
+                FIELD_HEIGHT + offset,
+                0,
+                text,
+                color_pair(color)
+                )
 
         # Вывод легенды
         for text, offset, color in legend_lines:
@@ -194,13 +222,13 @@ class Game:
         if (
             x < 0 or x >= FIELD_WIDTH or  # Вышел за границы поля
             y < 0 or y >= FIELD_HEIGHT or
-            self.field[y][x] == DEBRIS or # Столкнулся с обломками
-            self.ship.fuel <= 0 # закончилось топливо
+            self.field[y][x] == DEBRIS or  # Столкнулся с обломками
+            self.ship.fuel <= 0  # закончилось топливо
         ):
             return 'loss'
 
-        for hole in self.holes:
-            hole.affect_ship(self.ship, self.holes) # проверяем близость к дырам
+        for hole in self.holes:  # проверяем близость к дырам
+            hole.affect_ship(self.ship, self.holes)
 
         if self.field[y][x] == BASE:
             return 'win'  # Достиг базы
@@ -249,7 +277,7 @@ class Hole:
         self.x = x
         self.y = y
         self.type = hole_type  # Тип дыры: чёрная или белая
-        self.radius = radius # радиус дыры
+        self.radius = radius  # радиус дыры
         self.body = []  # Части тела дыры
         self.influence_area = []
         self.timer = 0
@@ -287,15 +315,17 @@ class Hole:
         if ship_position in self.body:
             if self.type == BLACK_HOLE:
                 # Телепорт в случайную белую дыру
-                white_holes = [hole for hole in holes if hole.type == WHITE_HOLE]
+                white_holes = [hole for hole in holes
+                               if hole.type == WHITE_HOLE]
                 if white_holes:
                     target = random.choice(white_holes)
                     ship.x, ship.y = target.x, target.y
 
-                    # После телепорта корабль продолжает движение в случайном направлении
+                    # продолжает движение в случайном направлении
                     available_directions = [
                         (dx, dy) for dx, dy in DIRECTIONS.values()
-                        if 0 <= ship.x + dx < FIELD_WIDTH and 0 <= ship.y + dy < FIELD_HEIGHT
+                        if 0 <= ship.x + dx < FIELD_WIDTH and
+                        0 <= ship.y + dy < FIELD_HEIGHT
                     ]
                     if available_directions:
                         dx, dy = random.choice(available_directions)
@@ -344,11 +374,13 @@ class Ship:
         if self.speed:
             self.x += dx
             self.y += dy
-            self.fuel -= self.speed * 0.4  # Чем выше скорость, тем больше расход топлива
+            # Чем выше скорость, тем больше расход топлив
+            self.fuel -= self.speed * 0.4
 
     def change_direction(self, step) -> None:
         """Меняет направление корабля"""
-        directions_list = list(DIRECTIONS.keys())  # Получаем список направлений
+        # Получаем список направлений
+        directions_list = list(DIRECTIONS.keys())
         current_index = directions_list.index(self.img)
         new_index = (current_index + step) % len(directions_list)
         self.img = directions_list[new_index]  # Обновляем изображение корабля
@@ -356,4 +388,3 @@ class Ship:
     def change_speed(self, delta) -> None:
         """Изменяет скорость корабля"""
         self.speed = max(0, min(2, self.speed + delta))
-

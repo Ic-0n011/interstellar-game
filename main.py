@@ -44,7 +44,10 @@ def main_menu(stdscr) -> str:
             break
         elif (key == KEY_UP or key == KEY_A2) and current_row > 0:
             current_row -= 1
-        elif (key == KEY_DOWN or key == KEY_C2) and current_row < len(MAIN_MENU) - 1:
+        elif (
+            (key == KEY_DOWN or key == KEY_C2) and
+            current_row < len(MAIN_MENU) - 1
+        ):
             current_row += 1
         elif key == ord('\n'):  # Enter
             if current_row == 0:
@@ -57,11 +60,13 @@ def main_menu(stdscr) -> str:
             elif current_row == 3:
                 break
 
+
 def show_text_screen(stdscr, text_list) -> None:
     stdscr.clear()
     for idx, line in enumerate(text_list):
         stdscr.addstr(FIELD_HEIGHT // 2 - len(text_list) // 2 + idx, 2, line)
     stdscr.refresh()
     stdscr.getch()
+
 
 wrapper(main_menu)
