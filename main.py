@@ -12,98 +12,59 @@ from curses import (
     COLOR_MAGENTA,
     )
 from game import Game
-# pip install windows-curses
+from texts import MAIN_MENU, INSTRUCTIONS, AUTHOR_INFO
 
+# pip install windows-curses
 
 def main_menu(stdscr) -> str:
     current_row = 0
-    menu = ["Начать новую игру", "Что нужно делать", "Об авторе", "Выход"]
-
     while True:
+        start_color()
+        init_pair(6, COLOR_RED, COLOR_MAGENTA)
         stdscr.clear()
-
-        # Получаем размеры текущего окна
         height, width = stdscr.getmaxyx()
 
-        # Проверяем, достаточно ли места для отображения
-        if height < FIELD_HEIGHT or width < FIELD_WIDTH:
+        if height < (FIELD_HEIGHT + 16) or width < FIELD_WIDTH:
             stdscr.addstr(0, 0, "Увеличьте размер окна терминала.")
             stdscr.refresh()
             stdscr.getch()
             continue
 
-        # Рисуем меню
-        for idx, row in enumerate(menu):
+        for idx, row in enumerate(MAIN_MENU):
             x = (width // 2) - (len(row) // 2)
-            y = height // 2 - len(menu) // 2 + idx
+            y = height // 2 - len(MAIN_MENU) // 2 + idx
             if idx == current_row:
-                stdscr.addstr(y, x, row, color_pair(1))
+                stdscr.addstr(y, x, row, color_pair(6))
             else:
                 stdscr.addstr(y, x, row)
 
         stdscr.refresh()
         key = stdscr.getch()
 
-        if (key == KEY_UP or key == KEY_A2) and current_row > 0:
+        if key == 27:  # ESC
+            return "exit"
+        elif (key == KEY_UP or key == KEY_A2) and current_row > 0:
             current_row -= 1
-        elif (key == KEY_DOWN or key == KEY_C2) and current_row < len(menu) - 1:
+        elif (key == KEY_DOWN or key == KEY_C2) and current_row < len(MAIN_MENU) - 1:
             current_row += 1
         elif key == ord('\n'):  # Enter
-            if current_row == 0:  # Начать новую игру
-                return "new_game"
-            elif current_row == 1:  # Что нужно делать
-                show_instructions(stdscr)
-            elif current_row == 2:  # Об авторе
-                show_author(stdscr)
-            elif current_row == 3:  # Выход
-                return "exit"
+            if current_row == 0:
+                game = Game(stdscr)
+                game.play()
+            elif current_row == 1:
+                show_text_screen(stdscr, INSTRUCTIONS)
+            elif current_row == 2:
+                show_text_screen(stdscr, AUTHOR_INFO)
+            elif current_row == 3:
+                break
 
-def show_instructions(stdscr) -> None:
+def show_text_screen(stdscr, text_list) -> None:
     stdscr.clear()
-    instructions = [
-        "Цель игры: добраться до базы (O),",
-        "за кратчайшее время, следите за показателем топлива!",
-        "избегая чёрных дыр (B) и обломков материи (X).",
-        "Белые дыры (W) отбросят вас в случайном направлении.",
-        "",
-        "",
-        "Управление:",
-        "Стрелка влево/вправо - Поворот корабля.",
-        "Стрелка вверх - Ускорение, стрелка вниз - тормоз",
-        "",
-        "",
-        "Нажмите любую клавишу, чтобы вернуться в меню."
-    ]
-
-    for idx, line in enumerate(instructions):
-        stdscr.addstr(FIELD_HEIGHT // 2 - len(instructions) // 2 + idx, 2, line)
+    for idx, line in enumerate(text_list):
+        stdscr.addstr(FIELD_HEIGHT // 2 - len(text_list) // 2 + idx, 2, line)
     stdscr.refresh()
     stdscr.getch()
 
-def show_author(stdscr) -> None:
-    stdscr.clear()
-    author_info = [
-        "Автор игры: Ic-0n.",
-        "Версия: 1.0.",
-        "",
-        "Нажмите любую клавишу, чтобы вернуться в меню."
-    ]
+wrapper(main_menu)
+input("Нажмите Enter для выхода...")
 
-    for idx, line in enumerate(author_info):
-        stdscr.addstr(FIELD_HEIGHT // 2 - len(author_info) // 2 + idx, 2, line)
-    stdscr.refresh()
-    stdscr.getch()
-
-def main(stdscr) -> None:
-    start_color()
-    init_pair(1, COLOR_RED, COLOR_MAGENTA)
-
-    while True:
-        choice = main_menu(stdscr)
-        if choice == "new_game":
-            game = Game(stdscr)
-            game.play()
-        elif choice == "exit":
-            break
-
-wrapper(main)
