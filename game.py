@@ -51,7 +51,7 @@ class Game:
 
     def place_object(self, obj, min_distance=5) -> tuple[int, int]:
         """Размещает объект на игровом поле, избегая близости к черным дырам"""
-        while True:
+        while self.empty_cells:
             x, y = random.choice(self.empty_cells)
             if all(
                 abs(x - h.x) + abs(y - h.y) >= min_distance for h in self.holes
@@ -63,7 +63,7 @@ class Game:
     def generate_field(self) -> None:
         """Генерирует черные и белые дыры, а также обломки."""
         for _ in range(6):
-            while True:
+            while self.empty_cells:
                 x, y = random.choice(self.empty_cells)
                 radius = random.choice([2, 3])
                 if len(self.holes) % 2 == 0:
