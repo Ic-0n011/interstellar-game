@@ -1,35 +1,7 @@
-from config import (
-    EMPTY,
-    FIELD_HEIGHT,
-    FIELD_WIDTH,
-    BASE,
-    BLACK_HOLE,
-    WHITE_HOLE,
-    DEBRIS,
-    DIRECTIONS,
-    )
-from curses import (
-    start_color,
-    init_pair,
-    color_pair,
-    COLOR_BLACK,
-    COLOR_YELLOW,
-    COLOR_RED,
-    COLOR_CYAN,
-    COLOR_WHITE,
-    COLOR_GREEN,
-    KEY_LEFT,
-    KEY_B3,
-    KEY_RIGHT,
-    KEY_B1,
-    KEY_UP,
-    KEY_A2,
-    KEY_DOWN,
-    KEY_C2,
-    napms,
-    )
+from config import *
+import curses as crs
 import random
-from texts import ASCII_SHIP_WIN, ASCII_SHIP_LOSE, ASCII_TITLE
+from texts import ASCII_SHIP_WIN, ASCII_SHIP_LOSE
 
 
 class Game:
@@ -46,6 +18,7 @@ class Game:
         ]
         self.holes = []
         self.ship = Ship(FIELD_WIDTH // 2, FIELD_HEIGHT // 2)
+        self.empty_cells.remove((FIELD_WIDTH // 2, FIELD_HEIGHT // 2))
         self.generate_field()
         self.base_x, self.base_y = self.place_object(BASE)
 
@@ -83,12 +56,16 @@ class Game:
 
     def draw(self) -> None:
         """Отображает игровое поле и интерфейс в терминале."""
-        start_color()
-        init_pair(1, COLOR_CYAN, COLOR_BLACK)   # Корабль (синий)
-        init_pair(2, COLOR_GREEN, COLOR_BLACK)  # База (зелёный)
-        init_pair(3, COLOR_RED, COLOR_BLACK)    # Обломки (красный)
-        init_pair(4, COLOR_WHITE, COLOR_BLACK)  # Чёрная дыра (белый)
-        init_pair(5, COLOR_YELLOW, COLOR_BLACK)  # Белая дыра (жёлтый)
+        crs.start_color()
+        colors = [
+            crs.COLOR_CYAN,  # Корабль (синий)
+            crs.COLOR_GREEN,  # База (зелёный)
+            crs.COLOR_RED,  # Обломки (красный)
+            crs.COLOR_WHITE,  # Чёрная дыра (белый)
+            crs.COLOR_YELLOW,  # Белая дыра (жёлтый)
+        ]
+        for i, cr in enumerate(colors):
+            crs.init_pair(i+1, cr, crs.COLOR_BLACK)
 
         self.stdscr.clear()
         # Проверяем размеры терминала
@@ -100,14 +77,6 @@ class Game:
             return
 
         buffer = []
-
-        # Рисуем границы
-        for y in range(FIELD_HEIGHT + 2):
-            for x in range(FIELD_WIDTH + 2):
-                if y == 0 or y == FIELD_HEIGHT + 1:
-                    buffer.append((y, x, '─', 1))
-                elif x == 0 or x == FIELD_WIDTH + 1:
-                    buffer.append((y, x, '│', 1))
 
         # Рисуем игровое поле
         for y in range(FIELD_HEIGHT):
@@ -148,9 +117,13 @@ class Game:
                 )
             )
 
-        # Отображаем всё сразу
-        for y, x, ch, color in buffer:
-            self.stdscr.addch(y, x, ch, color_pair(color))
+        # Рисуем границы
+        for y in range(FIELD_HEIGHT + 2):
+            for x in range(FIELD_WIDTH + 2):
+                if y == 0 or y == FIELD_HEIGHT + 1:
+                    buffer.append((y, x, '─', 1))
+                elif x == 0 or x == FIELD_WIDTH + 1:
+                    buffer.append((y, x, '│', 1))
 
         # Вычисляем необходимые значения
         to_base = abs(self.ship.x-self.base_x)+abs(self.ship.y-self.base_y)
@@ -160,23 +133,22 @@ class Game:
         # Информация об игре
         info_lines = [
             (f"│Скорость: {self.ship.speed}", 3, 1),
-            (f"│Направление: {self.ship.img}", 4, 2),
+            (f"│Направление: {self.ship.direction}", 4, 2),
             (f"│Координаты: ({self.ship.x}, {self.ship.y})", 5, 3),
             (f"│Расстояние до базы: {to_base}", 6, 4),
             (f"│Топливо: {round(self.ship.fuel, 2)}", 7, 1),
             (f"│Время: {elapsed_hours} ч {elapsed_minutes} мин", 8, 5),
+            ("│Легенда:", 10, 1),
+            (f"│{self.ship.img} - Ваш корабль", 11, 1),
+            ("│O - База", 12, 2),
+            ("│X - Обломки", 13, 3),
+            ("│B - Чёрная дыра", 14, 4),
+            ("│W - Белая дыра", 15, 5),
         ]
 
-        # Легенда
-        legend_y = FIELD_HEIGHT + 10
-        legend_lines = [
-            ("│Легенда:", legend_y, 1),
-            (f"│{self.ship.img} - Ваш корабль", legend_y + 1, 1),
-            ("│O - База", legend_y + 2, 2),
-            ("│X - Обломки", legend_y + 3, 3),
-            ("│B - Чёрная дыра", legend_y + 4, 4),
-            ("│W - Белая дыра", legend_y + 5, 5),
-        ]
+        # Отображаем всё сразу
+        for y, x, ch, color in buffer:
+            self.stdscr.addch(y, x, ch, crs.color_pair(color))
 
         # Вывод информации
         for text, offset, color in info_lines:
@@ -184,13 +156,8 @@ class Game:
                 FIELD_HEIGHT + offset,
                 0,
                 text,
-                color_pair(color)
+                crs.color_pair(color)
                 )
-
-        # Вывод легенды
-        for text, offset, color in legend_lines:
-            self.stdscr.addstr(offset, 0, text, color_pair(color))
-        self.stdscr.refresh()
 
     def handle_input(self) -> None:
         """Управление игрока с помощью стрелок"""
@@ -201,13 +168,13 @@ class Game:
 
         if key == 27:  # ESC
             self.running = False
-        elif self.last_key == KEY_RIGHT or self.last_key == KEY_B3:
+        elif self.last_key == crs.KEY_RIGHT or self.last_key == crs.KEY_B3:
             self.ship.change_direction(-1)
-        elif self.last_key == KEY_LEFT or self.last_key == KEY_B1:
+        elif self.last_key == crs.KEY_LEFT or self.last_key == crs.KEY_B1:
             self.ship.change_direction(1)
-        elif self.last_key == KEY_UP or self.last_key == KEY_A2:
+        elif self.last_key == crs.KEY_UP or self.last_key == crs.KEY_A2:
             self.ship.change_speed(1)
-        elif self.last_key == KEY_DOWN or self.last_key == KEY_C2:
+        elif self.last_key == crs.KEY_DOWN or self.last_key == crs.KEY_C2:
             self.ship.change_speed(-1)
 
         self.last_key = -1  # Очищаем последнюю нажатую кнопку
@@ -237,7 +204,6 @@ class Game:
 
     def play(self) -> str:
         """Начало игры, игровой цикл"""
-        self.show_ASCII_screen(ASCII_TITLE, "Начало игры")
         self.elapsed_time = 0
         self.last_key = -1
 
@@ -245,7 +211,7 @@ class Game:
             self.draw()
             self.handle_input()
             # Обновление времени
-            napms(int(150 / (2 if self.ship.speed == 2 else 1)))
+            crs.napms(int(150 / (2 if self.ship.speed == 2 else 1)))
             self.elapsed_time += 0.3 if self.ship.speed < 2 else 0.15
 
             status = self.check_collisions()
@@ -269,7 +235,7 @@ class Game:
 
         self.stdscr.addstr(start_y + len(lines) + 1, start_x, message)
         self.stdscr.refresh()
-        napms(2000)
+        crs.napms(2000)
 
 
 class Hole:
@@ -366,7 +332,7 @@ class Ship:
         self.x = x
         self.y = y
         self.img = "↓"  # Отображение корабля - зависит от направления
-        self.direction = 0  # Текущее направление
+        self.direction = "↓"  # Текущее направление
         self.speed = 0  # Текущая скорость
         self.fuel = 100  # Начальное количество топлива
 
@@ -384,6 +350,12 @@ class Ship:
         current_index = directions_list.index(self.img)
         new_index = (current_index + step) % len(directions_list)
         self.img = directions_list[new_index]  # Обновляем изображение корабля
+
+        if DIRECTIONS[self.img][0] and DIRECTIONS[self.img][1]:
+            self.direction = '↓' if DIRECTIONS[self.img][1] > 0 else '↑'
+            self.direction += '→' if DIRECTIONS[self.img][0] > 0 else '←'
+        else:
+            self.direction = self.img
 
     def change_speed(self, delta) -> None:
         """Изменяет скорость корабля"""

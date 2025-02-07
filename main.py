@@ -1,25 +1,14 @@
 from config import FIELD_HEIGHT, FIELD_WIDTH
-from curses import (
-    wrapper,
-    color_pair,
-    start_color,
-    init_pair,
-    KEY_UP,
-    KEY_A2,
-    KEY_DOWN,
-    KEY_C2,
-    COLOR_RED,
-    COLOR_MAGENTA,
-    )
+import curses as crs
 from game import Game
-from texts import MAIN_MENU, INSTRUCTIONS, AUTHOR_INFO
+from texts import MAIN_MENU, INSTRUCTIONS, AUTHOR_INFO, ASCII_TITLE
 
 
 def main_menu(stdscr) -> str:
     current_row = 0
     while True:
-        start_color()
-        init_pair(6, COLOR_RED, COLOR_MAGENTA)
+        crs.start_color()
+        crs.init_pair(6, crs.COLOR_RED, crs.COLOR_BLACK)
         stdscr.clear()
         height, width = stdscr.getmaxyx()
 
@@ -29,11 +18,18 @@ def main_menu(stdscr) -> str:
             stdscr.getch()
             continue
 
+        lines = ASCII_TITLE.split("\n")
+        start_y = FIELD_HEIGHT // 2 - len(lines) // 2
+        start_x = FIELD_WIDTH // 2 + 18
+
+        for i, line in enumerate(lines):
+            stdscr.addstr(start_y + i, start_x, line)
+
         for idx, row in enumerate(MAIN_MENU):
             x = (width // 2) - (len(row) // 2)
             y = height // 2 - len(MAIN_MENU) // 2 + idx
             if idx == current_row:
-                stdscr.addstr(y, x, row, color_pair(6))
+                stdscr.addstr(y, x, row, crs.color_pair(6))
             else:
                 stdscr.addstr(y, x, row)
 
@@ -42,10 +38,10 @@ def main_menu(stdscr) -> str:
 
         if key == 27:  # ESC
             break
-        elif (key == KEY_UP or key == KEY_A2) and current_row > 0:
+        elif (key == crs.KEY_UP or key == crs.KEY_A2) and current_row > 0:
             current_row -= 1
         elif (
-            (key == KEY_DOWN or key == KEY_C2) and
+            (key == crs.KEY_DOWN or key == crs.KEY_C2) and
             current_row < len(MAIN_MENU) - 1
         ):
             current_row += 1
@@ -69,4 +65,4 @@ def show_text_screen(stdscr, text_list) -> None:
     stdscr.getch()
 
 
-wrapper(main_menu)
+crs.wrapper(main_menu)
