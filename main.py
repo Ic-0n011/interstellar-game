@@ -19,8 +19,8 @@ def main_menu(stdscr) -> str:
             continue
 
         lines = ASCII_TITLE.split("\n")
-        start_y = FIELD_HEIGHT // 2 - len(lines) // 2
-        start_x = FIELD_WIDTH // 2 + 18
+        start_y = height // 2 - len(lines)
+        start_x = width // 2 - (len(lines[1]) // 2)
 
         for i, line in enumerate(lines):
             stdscr.addstr(start_y + i, start_x, line)
